@@ -32,7 +32,6 @@ interface InterestModuleLike {
 }
 
 contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
-    mapping(address => bool) whitelist;
     mapping(uint256 => Loan) public loans;
     mapping(uint256 => LoanRequest) public requestsById;
     mapping(address => uint256) public requestsByAddress;
@@ -47,11 +46,6 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         settlementToken = token;
         IDs = 1;
         interestModule = InterestModuleLike(_interestModule);
-    }
-
-    modifier eligibleForLoan(address user) {
-        require(whitelist[user], "Not eligible for loans");
-        _;
     }
 
     modifier loanExists(uint256 id) {
@@ -80,7 +74,7 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         LoanPurpose purpose,
         uint256 amount,
         uint256 duration
-    ) external eligibleForLoan(msg.sender) {
+    ) external {
         LoanRequest storage request = requestsById[IDs];
         request.amount = amount;
         request.borrower = msg.sender;
@@ -100,11 +94,7 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         IDs++;
     }
 
-    function _fulfillLoan(uint256 id)
-        internal
-        requestExists(id)
-        eligibleForLoan(requestsById[id].borrower)
-    {
+    function _fulfillLoan(uint256 id) internal requestExists(id) {
         LoanRequest storage request = requestsById[id];
         require(
             loans[requestsByAddress[request.borrower]].start == 0 &&
