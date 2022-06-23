@@ -7,3 +7,6 @@
 [submodule "lib/1754-Core"]
 	path = lib/1754-Core
 	url = https://github.com/1754-Factory/1754-Core
+[submodule "lib/1754-Packages"]
+	path = lib/1754-Packages
+	url = https://github.com/1754-Factory/1754-Packages
