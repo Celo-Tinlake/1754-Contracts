@@ -37,11 +37,15 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
     mapping(uint256 => LoanRequest) public requestsById;
     mapping(address => uint256) public requestsByAddress;
     mapping(address => int256) public creditScores;
+    mapping(address => bool) public attestors;
     uint256 public interestRate = 10**9; // 10% interest rate
     address public settlementToken;
     address public creditToken;
     uint256 public IDs;
     InterestModuleLike public interestModule;
+
+    event AttestorAdded(address indexed attestor);
+    event AttestorRemoved(address indexed attestor);
 
     constructor(address token, address _interestModule) Ownable() {
         settlementToken = token;
@@ -57,7 +61,15 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
     }
 
     modifier requestExists(uint256 id) {
-        require(requestsById[id].amount > 0, "Request does not exist");
+        require(
+            requestsById[id].borrower != address(0),
+            "Request does not exist"
+        );
+        _;
+    }
+
+    modifier attestor(address addr) {
+        require(attestors[addr], "Not an attestor");
         _;
     }
 
@@ -73,6 +85,31 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         return interestModule.debt(id);
     }
 
+    function addAttestor(address newAttestor) external onlyOwner {
+        require(!attestors[newAttestor], "Already an attestor");
+        attestors[newAttestor] = true;
+
+        emit AttestorAdded(newAttestor);
+    }
+
+    function removeAttestor(address toRemove)
+        external
+        onlyOwner
+        attestor(toRemove)
+    {
+        attestors[toRemove] = false;
+
+        emit AttestorRemoved(toRemove);
+    }
+
+    function attest(
+        uint256 loanId,
+        uint256 score,
+        bytes calldata details
+    ) external attestor(msg.sender) {
+        emit Attestation(loanId, msg.sender, score, details);
+    }
+
     function requestLoan(
         LoanPurpose purpose,
         uint256 amount,
@@ -81,7 +118,6 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         LoanRequest storage request = requestsById[IDs];
         request.amount = amount;
         request.borrower = msg.sender;
-        request.creditScore = creditScores[msg.sender];
         request.purpose = purpose;
         request.duration = duration;
 
@@ -89,7 +125,6 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         emit LoanRequested(
             IDs,
             msg.sender,
-            creditScores[msg.sender],
             block.timestamp,
             amount,
             interestRate
@@ -122,11 +157,7 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         );
     }
 
-    function contribute(
-        uint256 id,
-        uint256 tranche,
-        uint256 amount
-    ) external {
+    function contribute(uint256 id, uint256 amount) external {
         LoanRequest storage request = requestsById[id];
         uint256 amountToFill = request.amount - request.amountFilled;
         uint256 fillAmount = amount > amountToFill ? amountToFill : amount;
@@ -137,14 +168,13 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
                 fillAmount
             )
         );
-        request.amountFilled -= fillAmount;
+        request.amountFilled += fillAmount;
         if (request.amountFilled == request.amount) {
             _fulfillLoan(id);
         }
         IERC721Credit(creditToken).mint(
             CreditorStructures.CreditMintParams({
                 loanId: id,
-                trancheNumber: tranche,
                 amountSupplied: fillAmount,
                 creditor: msg.sender
             })

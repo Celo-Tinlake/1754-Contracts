@@ -6,11 +6,18 @@ interface MicroLoanEvents {
     event LoanRequested(
         uint256 indexed id,
         address indexed requestor,
-        int256 indexed creditScore,
         uint256 timestamp,
         uint256 amount,
         uint256 rate
     );
+
+    event Attestation(
+        uint256 indexed loanId,
+        address indexed attestor,
+        uint256 indexed score,
+        bytes details
+    );
+
     event LoanFulfilled(
         uint256 indexed id,
         uint256 time,

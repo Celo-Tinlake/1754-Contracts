@@ -42,7 +42,6 @@ contract LoanStructures {
         uint256 amount;
         uint256 amountFilled;
         address borrower;
-        int256 creditScore;
         uint256 duration;
         LoanPurpose purpose;
     }

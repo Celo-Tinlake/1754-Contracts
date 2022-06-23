@@ -53,7 +53,6 @@ contract ERC721Credit is ERC721, CreditorStructures {
         Credit storage credit = creditData[linesOfCredit];
         credit.amountSupplied = params.amountSupplied;
         credit.loanId = params.loanId;
-        credit.trancheNumber = params.trancheNumber;
         _mint(params.creditor, linesOfCredit);
         return linesOfCredit++;
     }
