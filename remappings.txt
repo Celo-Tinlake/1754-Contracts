@@ -1,1 +1,3 @@
 @openzeppelin/=lib/openzeppelin-contracts/
+@1754-factory/tinlake/=lib/1754-Core/
+@1754-factory/packages/=lib/1754-Packages/
