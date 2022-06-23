@@ -59,6 +59,7 @@ export default {
       verify: {
         etherscan: {
           apiKey: process.env.ETHERSCAN_API_KEY,
+          apiUrl: "https://alfajores.celoscan.xyz/",
         },
       },
     },

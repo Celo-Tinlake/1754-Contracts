@@ -36,7 +36,7 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
     mapping(uint256 => Loan) public loans;
     mapping(uint256 => LoanRequest) public requestsById;
     mapping(address => uint256) public requestsByAddress;
-    mapping(address => int256) public creditScores;
+    mapping(address => uint256) public creditScores;
     mapping(address => bool) public attestors;
     uint256 public interestRate = 10**9; // 10% interest rate
     address public settlementToken;
@@ -85,6 +85,14 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         return interestModule.debt(id);
     }
 
+    function getRequester(uint256 id) external view returns (address) {
+        return requestsById[id].borrower;
+    }
+
+    function getAmountLeftToFill(uint256 id) external view returns (uint256) {
+        return requestsById[id].amount - requestsById[id].amountFilled;
+    }
+
     function addAttestor(address newAttestor) external onlyOwner {
         require(!attestors[newAttestor], "Already an attestor");
         attestors[newAttestor] = true;
@@ -107,6 +115,7 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         uint256 score,
         bytes calldata details
     ) external attestor(msg.sender) {
+        creditScores[requestsById[loanId].borrower] = score;
         emit Attestation(loanId, msg.sender, score, details);
     }
 
@@ -114,7 +123,7 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         LoanPurpose purpose,
         uint256 amount,
         uint256 duration
-    ) external returns (uint256 loanId){
+    ) external returns (uint256 loanId) {
         loanId = IDs;
         LoanRequest storage request = requestsById[IDs];
         request.amount = amount;
@@ -174,13 +183,14 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         if (request.amountFilled == request.amount) {
             _fulfillLoan(id);
         }
-        return IERC721Credit(creditToken).mint(
-            CreditorStructures.CreditMintParams({
-                loanId: id,
-                amountSupplied: fillAmount,
-                creditor: msg.sender
-            })
-        );
+        return
+            IERC721Credit(creditToken).mint(
+                CreditorStructures.CreditMintParams({
+                    loanId: id,
+                    amountSupplied: fillAmount,
+                    creditor: msg.sender
+                })
+            );
     }
 
     function calculateInterest(uint256 id) internal view returns (uint256) {
@@ -194,7 +204,8 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         int256 creditChange = int256(block.timestamp) - int256(loan.start);
         creditScores[loan.borrower] =
             creditScores[loan.borrower] +
-            creditChange;
+            block.timestamp -
+            loan.start;
         emit LoanFullyPaid(
             id,
             block.timestamp,
