@@ -2,14 +2,14 @@
 // Copyright (C) 2018  Rain <rainbreak@riseup.net>, Centrifuge
 pragma solidity ^0.8.13;
 
-import "./Interest.sol";
-import "../Auth/Auth.sol";
+import "@1754-factory/packages/src/math/interest.sol";
+import "@1754-factory/packages/src/auth/auth.sol";
 
 // ## Interest Group based Pile
 // The following is one implementation of a debt module. It keeps track of different buckets of interest rates and is optimized for many loans per interest bucket. It keeps track of interest
 // rate accumulators (chi values) for all interest rate categories. It calculates debt each
 // loan according to its interest rate category and pie value.
-contract Pile is Auth, Interest {
+contract InterestModule is Auth, Interest {
     // --- Data ---
 
     // stores all needed information of an interest rate group
@@ -44,7 +44,7 @@ contract Pile is Auth, Interest {
         rates[0].chi = ONE;
         rates[0].ratePerSecond = ONE;
 
-        wards[msg.sender] = true;
+        wards[msg.sender] = 1;
         emit Rely(msg.sender);
     }
 

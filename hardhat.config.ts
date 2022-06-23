@@ -56,6 +56,11 @@ export default {
       live: true,
       gasPrice: 0.5 * 10 ** 9,
       gas: 8000000,
+      verify: {
+        etherscan: {
+          apiKey: process.env.ETHERSCAN_API_KEY,
+        },
+      },
     },
     hardhat: {
       chainId: 31337,

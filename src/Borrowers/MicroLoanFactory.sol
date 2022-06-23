@@ -6,6 +6,7 @@ import "./IERC721Credit.sol";
 import "../Structures/CreditorStructures.sol";
 import "../Structures/LoanStructures.sol";
 import "../Structures/MicroLoanEvents.sol";
+import "./ERC721Credit.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -46,6 +47,8 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         settlementToken = token;
         IDs = 1;
         interestModule = InterestModuleLike(_interestModule);
+        ERC721Credit credit = new ERC721Credit(address(this));
+        creditToken = address(credit);
     }
 
     modifier loanExists(uint256 id) {
