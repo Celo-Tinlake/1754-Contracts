@@ -145,7 +145,7 @@ contract InterestModule is Auth, Interest {
     ) external auth {
         rates[loan].chi = ONE;
         rates[loan].lastUpdated = uint48(block.timestamp);
-        rates[loan].ratePerSecond = ratePerSecond;
+        rates[loan].ratePerSecond = ONE; //ratePerSecond - ratePerSecond;
         rates[loan].fixedRate = fixedRate;
         loanRates[loan] = loan;
     }

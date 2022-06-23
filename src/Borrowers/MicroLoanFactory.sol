@@ -114,14 +114,15 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         LoanPurpose purpose,
         uint256 amount,
         uint256 duration
-    ) external {
+    ) external returns (uint256 loanId){
+        loanId = IDs;
         LoanRequest storage request = requestsById[IDs];
         request.amount = amount;
         request.borrower = msg.sender;
         request.purpose = purpose;
         request.duration = duration;
 
-        requestsByAddress[msg.sender] = IDs;
+        requestsByAddress[msg.sender] = loanId;
         emit LoanRequested(
             IDs,
             msg.sender,
@@ -147,6 +148,7 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         loan.purpose = request.purpose;
         loan.amount = request.amount;
         interestModule.newLoan(id, interestRate, interestRate);
+        interestModule.incDebt(id, loan.amount);
 
         IERC20(settlementToken).transfer(request.borrower, request.amount);
         emit LoanFulfilled(
@@ -157,7 +159,7 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         );
     }
 
-    function contribute(uint256 id, uint256 amount) external {
+    function contribute(uint256 id, uint256 amount) external returns (uint256) {
         LoanRequest storage request = requestsById[id];
         uint256 amountToFill = request.amount - request.amountFilled;
         uint256 fillAmount = amount > amountToFill ? amountToFill : amount;
@@ -172,7 +174,7 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         if (request.amountFilled == request.amount) {
             _fulfillLoan(id);
         }
-        IERC721Credit(creditToken).mint(
+        return IERC721Credit(creditToken).mint(
             CreditorStructures.CreditMintParams({
                 loanId: id,
                 amountSupplied: fillAmount,
@@ -207,6 +209,7 @@ contract MicroLoanFactory is LoanStructures, MicroLoanEvents, Ownable {
         Loan storage loan = loans[id];
         interestModule.accrue(id);
         uint256 totalOwed = interestModule.debt(id);
+        require(totalOwed > 0, "Does not owe anything");
         uint256 amountPaid = amount > totalOwed ? totalOwed : amount;
         loan.totalPaid += amountPaid;
         require(

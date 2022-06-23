@@ -16,7 +16,7 @@ contract ERC721Credit is ERC721, CreditorStructures {
     address minter;
     uint256 linesOfCredit;
 
-    constructor(address _minter) ERC721("Credit Receipts", "CRED") {
+    constructor(address _minter) ERC721("1754 Bullet Loan Credit Receipts", "bFACT") {
         minter = _minter;
         linesOfCredit = 0;
     }
