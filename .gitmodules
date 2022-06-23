@@ -10,3 +10,6 @@
 [submodule "lib/1754-Packages"]
 	path = lib/1754-Packages
 	url = https://github.com/1754-Factory/1754-Packages
+[submodule "lib/forge-std"]
+	path = lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
