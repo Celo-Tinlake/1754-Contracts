@@ -8,15 +8,115 @@ import { fornoURLs, ICeloNetwork } from "@ubeswap/hardhat-celo";
 import "dotenv/config";
 import "hardhat-abi-exporter";
 import { removeConsoleLog } from "hardhat-preprocessor";
-import { HardhatUserConfig } from "hardhat/config";
+import { HardhatUserConfig, task } from "hardhat/config";
 import { HDAccountsUserConfig } from "hardhat/types";
 import "solidity-coverage";
+import { MicroLoanFactory } from "./typechain-types/MicroLoanFactory";
+import { FundManager } from "./typechain-types/FundManager";
+import { InterestModule } from "./typechain-types/InterestModule";
 
 // task("test", "Test the contracts", async () => {});
 const accounts: HDAccountsUserConfig = {
   mnemonic:
     process.env.MNEMONIC ||
     "test test test test test test test test test test test junk",
+};
+
+task("manager", "Deploys a fund manager")
+  .addParam("symbol", "Fund manager symbol", "1754")
+  .addParam("senior")
+  .setAction(
+    async (args: { symbol: string; senior: string }, hre, runSuper) => {
+      const { deployer } = await hre.getNamedAccounts();
+      const { symbol, senior } = args;
+      const loanFactoryContract =
+        await hre.ethers.getContract<MicroLoanFactory>(
+          "MicroLoanFactory",
+          deployer
+        );
+      const delegateFactory = await hre.ethers.getContractFactory(
+        "DelegatorWhitelistAll"
+      );
+      const managerFactory = await hre.ethers.getContractFactory(
+        "FundManager",
+        deployer
+      );
+
+      const delegatorDeployment = await delegateFactory.deploy();
+      const depositToken = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1";
+
+      const manager = await managerFactory.deploy(
+        symbol,
+        senior,
+        loanFactoryContract.address,
+        depositToken,
+        delegatorDeployment.address
+      );
+
+      console.log(`Manager ${symbol} deployed at ${manager.address}`);
+    }
+  );
+
+task("request")
+  .addParam("amount")
+  .addParam("days")
+  .setAction(
+    async ({ amount, days }: { amount: string; days: string }, hre) => {
+      const { deployer } = await hre.getNamedAccounts();
+
+      const requestAmount = (parseFloat(amount) * 10 ** 18).toFixed(0);
+      const duration = parseInt(days, 10) * 24 * 60 * 60;
+      const loanFactoryContract =
+        await hre.ethers.getContract<MicroLoanFactory>(
+          "MicroLoanFactory",
+          deployer
+        );
+      await loanFactoryContract.requestLoan("1", requestAmount, duration);
+    }
+  );
+
+task("connect").setAction(async (_, hre) => {
+  const { deployer } = await hre.getNamedAccounts();
+
+  const interestModule = await hre.ethers.getContract<InterestModule>(
+    "InterestModule",
+    deployer
+  );
+
+  const loanFactoryContract = await hre.ethers.getContract<MicroLoanFactory>(
+    "MicroLoanFactory",
+    deployer
+  );
+
+  await interestModule.rely(loanFactoryContract.address);
+});
+
+task("auto_invest")
+  .addParam("manager", "address of manager for auto investing")
+  .setAction(async ({ manager }: { manager: string }, hre) => {
+    const { deployer } = await hre.getNamedAccounts();
+    const loanFactoryContract = await hre.ethers.getContract<MicroLoanFactory>(
+      "MicroLoanFactory",
+      deployer
+    );
+    const managerContract = await hre.ethers.getContractAt<FundManager>(
+      "FundManager",
+      manager
+    );
+    const id = await loanFactoryContract.IDs();
+    while (true) {
+      const newId = await loanFactoryContract.IDs();
+      if (!newId.eq(id)) {
+        console.log("Fulfilling loan");
+        await managerContract.fundLoan(id);
+        break;
+      }
+      await sleep(1000);
+    }
+  });
+
+const sleep = (milliseconds: number) => {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 };
 
 // , async (args, hre, runSuper) => {

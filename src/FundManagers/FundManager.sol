@@ -8,19 +8,21 @@ import {MicroLoanFactory} from "../Borrowers/MicroLoanFactory.sol";
 import {LoanStructures} from "../Structures/LoanStructures.sol";
 
 contract FundManager is Ownable {
-    uint256 seniorApy; // given in ray (10^26)
-    Delegator delegator;
-    FundTranche junior;
-    FundTranche senior;
-    MicroLoanFactory loanFactory;
-    uint256 riskThreshold;
-    IERC20 depositToken;
+    uint256 public seniorApy; // given in ray (10^26)
+    Delegator public delegator;
+    FundTranche public junior;
+    FundTranche public senior;
+    MicroLoanFactory public loanFactory;
+    uint256 public riskThreshold;
+    IERC20 public depositToken;
+    uint256 public totalDeposited;
 
     constructor(
         string memory _managerSymbol,
         uint256 _seniorApy,
         address _loanFactory,
-        address _depositToken
+        address _depositToken,
+        address _delegator
     ) Ownable() {
         junior = new FundTranche(_managerSymbol, "j");
         senior = new FundTranche(_managerSymbol, "s");
@@ -28,6 +30,7 @@ contract FundManager is Ownable {
         loanFactory = MicroLoanFactory(_loanFactory);
         depositToken = IERC20(_depositToken);
         riskThreshold = 100000;
+        delegator = Delegator(_delegator);
 
         depositToken.approve(address(loanFactory), 2**256 - 1);
     }
@@ -59,6 +62,7 @@ contract FundManager is Ownable {
             "Fund Manager: Transfer failed"
         );
         senior.mint(to, amount);
+        totalDeposited += amount;
     }
 
     function depositJunior(uint256 amount, address to) external {
@@ -67,6 +71,7 @@ contract FundManager is Ownable {
             "Fund Manager: Transfer failed"
         );
         junior.mint(to, amount);
+        totalDeposited += amount;
     }
 
     function withdrawSenior(uint256 amount, address to) external {
@@ -74,6 +79,7 @@ contract FundManager is Ownable {
             senior.burn(msg.sender, amount),
             "Fund Manager: Transfer failed"
         );
+        totalDeposited -= amount;
         depositToken.transfer(to, amount);
     }
 
@@ -82,6 +88,7 @@ contract FundManager is Ownable {
             junior.burn(msg.sender, amount),
             "Fund Manager: Transfer failed"
         );
+        totalDeposited -= amount;
         depositToken.transfer(to, amount);
     }
 }

@@ -15,7 +15,7 @@ const deployStorage: DeployFunction = async function ({
     deployer
   );
   const cUSD = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1";
-  await deploy("MicroLoanFactory", {
+  const deployment = await deploy("MicroLoanFactory", {
     from: deployer,
     args: [cUSD, interestModule.address],
     log: true,
@@ -23,6 +23,7 @@ const deployStorage: DeployFunction = async function ({
     //   proxyContract: "OptimizedTransparentProxy",
     // },
   });
+  await interestModule.rely(deployment.address);
 };
 
 export default deployStorage;
