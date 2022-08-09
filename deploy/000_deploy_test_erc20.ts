@@ -5,28 +5,20 @@ const deployStorage: DeployFunction = async function ({
   deployments,
   getChainId,
   getUnnamedAccounts,
-  ...rest
 }) {
   // await hre.run('compile');
   const { deployer } = await getNamedAccounts();
   const { deploy } = deployments;
-  const interestModule = await rest.ethers.getContract(
-    "InterestModule",
-    deployer
-  );
-  const erc20 = await rest.ethers.getContract("TestERC20", deployer);
-  const cUSD = erc20.address;
-  const deployment = await deploy("MicroLoanFactory", {
+  await deploy("TestERC20", {
     from: deployer,
-    args: [cUSD, interestModule.address],
+    args: [],
     log: true,
     // proxy: {
     //   proxyContract: "OptimizedTransparentProxy",
     // },
   });
-  await interestModule.rely(deployment.address);
 };
 
 export default deployStorage;
-deployStorage.id = "deploy_factory";
-deployStorage.tags = ["MicroloanFactory"];
+deployStorage.id = "deploy_erc20";
+deployStorage.tags = ["ERC20PresetFixedSupply"];

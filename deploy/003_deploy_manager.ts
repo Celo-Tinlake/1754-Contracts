@@ -7,26 +7,32 @@ const deployStorage: DeployFunction = async function ({
   getUnnamedAccounts,
   ...rest
 }) {
-  // await hre.run('compile');
   const { deployer } = await getNamedAccounts();
   const { deploy } = deployments;
-  const interestModule = await rest.ethers.getContract(
-    "InterestModule",
+  console.log(`Deploying FundManager from address ${deployer}`);
+
+  const loanFactory = await rest.ethers.getContract(
+    "MicroLoanFactory",
     deployer
   );
+
   const erc20 = await rest.ethers.getContract("TestERC20", deployer);
   const cUSD = erc20.address;
-  const deployment = await deploy("MicroLoanFactory", {
+
+  const managerSymbol = "TST";
+  const deployment = await deploy("FundManager", {
     from: deployer,
-    args: [cUSD, interestModule.address],
+    args: [managerSymbol, 10 ** 10, loanFactory.address, cUSD, deployer],
     log: true,
     // proxy: {
     //   proxyContract: "OptimizedTransparentProxy",
     // },
   });
-  await interestModule.rely(deployment.address);
+  console.log(
+    `Deployed FundManager ${managerSymbol} at address ${deployment.address}`
+  );
 };
 
 export default deployStorage;
-deployStorage.id = "deploy_factory";
-deployStorage.tags = ["MicroloanFactory"];
+deployStorage.id = "deploy_manager";
+deployStorage.tags = ["FundManager"];

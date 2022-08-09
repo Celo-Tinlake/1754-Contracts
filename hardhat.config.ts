@@ -14,6 +14,7 @@ import "solidity-coverage";
 import { MicroLoanFactory } from "./typechain-types/MicroLoanFactory";
 import { FundManager } from "./typechain-types/FundManager";
 import { InterestModule } from "./typechain-types/InterestModule";
+import { TestERC20 } from "./typechain-types/TestERC20";
 
 // task("test", "Test the contracts", async () => {});
 const accounts: HDAccountsUserConfig = {
@@ -25,10 +26,15 @@ const accounts: HDAccountsUserConfig = {
 task("manager", "Deploys a fund manager")
   .addParam("symbol", "Fund manager symbol", "1754")
   .addParam("senior")
+  .addParam("token")
   .setAction(
-    async (args: { symbol: string; senior: string }, hre, runSuper) => {
+    async (
+      args: { symbol: string; senior: string; token: string },
+      hre,
+      runSuper
+    ) => {
       const { deployer } = await hre.getNamedAccounts();
-      const { symbol, senior } = args;
+      const { symbol, senior, token } = args;
       const loanFactoryContract =
         await hre.ethers.getContract<MicroLoanFactory>(
           "MicroLoanFactory",
@@ -43,7 +49,7 @@ task("manager", "Deploys a fund manager")
       );
 
       const delegatorDeployment = await delegateFactory.deploy();
-      const depositToken = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1";
+      const depositToken = token;
 
       const manager = await managerFactory.deploy(
         symbol,
@@ -75,6 +81,38 @@ task("request")
     }
   );
 
+task("deposit")
+  .addParam("amount")
+  .addParam("manager")
+  .addParam("token")
+  .setAction(
+    async (
+      {
+        amount,
+        manager,
+        token,
+      }: { amount: string; manager: string; token: string },
+      hre
+    ) => {
+      const { deployer } = await hre.getNamedAccounts();
+
+      const requestAmount = BigInt(parseFloat(amount) * 10 ** 18).toString();
+      const managerContract = await hre.ethers.getContractAt<FundManager>(
+        "FundManager",
+        manager,
+        deployer
+      );
+      const erc20Contract = await hre.ethers.getContractAt<TestERC20>(
+        "TestERC20",
+        token,
+        deployer
+      );
+
+      await erc20Contract.approve(manager, requestAmount);
+      await managerContract.depositSenior(requestAmount, deployer);
+    }
+  );
+
 task("connect").setAction(async (_, hre) => {
   const { deployer } = await hre.getNamedAccounts();
 
@@ -103,10 +141,18 @@ task("auto_invest")
       "FundManager",
       manager
     );
+    await loanFactoryContract.addAttestor(deployer);
     const id = await loanFactoryContract.IDs();
     while (true) {
       const newId = await loanFactoryContract.IDs();
       if (!newId.eq(id)) {
+        console.log("Attesting Loan");
+        await loanFactoryContract.attest(
+          newId,
+          "348",
+          "0x1238127387abdeabdab12b12ab4b3b2b1b2b"
+        );
+        await sleep(5000);
         console.log("Fulfilling loan");
         await managerContract.fundLoan(id);
         break;
